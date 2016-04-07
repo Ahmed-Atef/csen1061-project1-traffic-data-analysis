@@ -138,8 +138,8 @@ Now trying to understand the rest of the columns we check the number of unique v
 We group the data by road names and then summarize the values by number of distinct values in ids then check the roads which has more than 1 unique id.
 
 ```{r}
- temp <- traffic.data[2:15] %>% group_by(`rd/nm`) %>% summarize(rp)
- temp <-  temp %>% subset(tr$distinct != 1)
+  temp <- traffic.data[2:15] %>% group_by(`rd/nm`) %>% summarize(distinct = n_distinct(`rd/ri`))
+ temp <-  temp %>% subset(temp$distinct != 1)
 ```
 
 So there exist roads having 2 ids one is "Other Roads " and the other is "Sa7rawy;Cairo To Alex"  and looking to a sample of each 
@@ -255,3 +255,10 @@ Roads with worst traffic
 traffic.data[2:17] %>% group_by(as.character(Road_Name)) %>% summarize(traffic = mean(as.numeric(Report_Status))) %>% arrange(desc(traffic))
 ```
 
+And here is the graph 
+
+```{r}
+ a<- traffic.data[2:17] %>% group_by(roads = as.character(Road_Name)) %>% summarize(traffic = mean(as.numeric(Report_Status)))
+ p <- ggplot(a, aes(roads, traffic))
+ p + geom_point()
+```
