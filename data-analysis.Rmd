@@ -153,4 +153,16 @@ So there exist roads having 2 ids one is "Other Roads " and the other is "Sa7raw
 
 we find that road it of sa7rawy can take either "307" or "523" and Other roads can take "21" or "99" and this confirms that rd/ri corresponds to road ID 
 
+Now there is an issue in the rd/nm column as it contains not just the road name but sometimes the start and destination of the person in the format road_name;Start to Destination so the column should be parsed and new columns having start and destination should be added 
+
+```{r}
+ traffic.data$Road_Name <- lapply(strsplit(as.character(traffic.data$`rd/nm`), ";"), "[", 1)
+ traffic.data$StartEnd <- lapply(strsplit(as.character(traffic.data$`rd/nm`), ";"), "[", 2)
+ traffic.data$Start <-lapply(strsplit(as.character(traffic.data$StartEnd), "To"), "[", 1)
+ traffic.data$Destination <-lapply(strsplit(as.character(traffic.data$StartEnd), "To"), "[", 2)
+ traffic.data$`rd/nm` <- NULL
+ traffic.data$StartEnd <- NULL
+```
+
+
 
