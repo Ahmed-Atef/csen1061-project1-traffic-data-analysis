@@ -160,7 +160,7 @@ Now there is an issue in the rd/nm column as it contains not just the road name 
  traffic.data$StartEnd <- lapply(strsplit(as.character(traffic.data$`rd/nm`), ";"), "[", 2)
  traffic.data$Start <-lapply(strsplit(as.character(traffic.data$StartEnd), "To"), "[", 1)
  traffic.data$Destination <-lapply(strsplit(as.character(traffic.data$StartEnd), "To"), "[", 2)
-gg traffic.data$StartEnd <- NULL
+ traffic.data$StartEnd <- NULL
 ```
 
  __rd/streq__ , __rd/cmrq__ , __rd/stid__ and __rd/rp/stid__ are still unclear so we try to figure out what they represent 
@@ -262,3 +262,7 @@ And here is the graph
  p <- ggplot(a, aes(roads, traffic))
  p + geom_point()
 ```
+
+
+
+Deadline ! 
