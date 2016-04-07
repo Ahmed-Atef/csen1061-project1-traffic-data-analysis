@@ -3,4 +3,154 @@ title: Traffic Data Analysis
 output: html_document
 ---
 
-this is where things start :)
+```{r}
+library(ggplot2)
+library(dplyr)
+traffic.data <- read.csv("~/Desktop/DataAnalysis/csen1061-project1-traffic-data-analysis/traffic-data.csv", header=FALSE,encoding="UTF-8")
+```
+Reading the data and loading the libraries needed
+
+# Data cleaning
+
+Checking the dimininsions of the given data 
+
+```{r}
+traffic.data %>% dim
+```
+Trying to understand what each column indicates by checking the full content of the first few rows.
+
+```{r}
+traffic.data %>% head
+```
+it was clear that the column names were presented in the first row so the column names are renamed with the values in the first row
+```{r}
+names(traffic.data) <-  traffic.data[1,] %>% unlist
+traffic.data <- traffic.data[-1,]
+```
+
+The data columns is divided into two category groups  ad and then there is a rd category , the columns of ad will be selected and observed trying to understand them serparetly by looking at some entries 
+```{r}
+ traffic.data %>% select(starts_with("ad")) %>% glimpse
+```
+
+Checking the number of unique values inside each column of the ads 
+
+```{r}
+traffic.data %>% select(starts_with("ad")) %>% rapply(function(x) length(unique(x)))
+```
+
+All of the advertisment columns has only one unique value so they are meaningless and should be omitted from the data 
+
+```{r}
+traffic.data <- traffic.data %>% select(-starts_with("ad")) %>% subset
+```
+
+Now checking the rd columns and trying to understand what each column represents first the same function to check unique values is applied to remove unnecessary columns without the need to know their meaning
+```{r}
+ traffic.data %>% select(starts_with("rd")) %>% rapply(function(x) length(unique(x)))
+```
+
+removing the rd/cl and rd/rp/type columns as they contain just one value so they are meaningless aswell
+
+```{r}
+ col <-  c("rd/cl", "rd/rp/type")
+ traffic.data <- traffic.data %>% select(- one_of(col)) %>% subset
+```
+
+Checking the content of the columns that has 2 unique values to check if they are neccessary to have 
+
+```{r}
+ col <- c("rd/img","rd/strq","rd/cmrq","rd/new")
+traffic.data %>% select(one_of(col)) %>% rapply(function(x) unique(x))
+```
+
+Noticing the values these are probably true/false values that maybe relevant so only the rd/img1 column is removed
+
+```{r}
+ col <-  c("rd/img")
+ traffic.data <- traffic.data %>% select(- one_of(col)) %>% subset
+```
+
+Checking the number of NA values in each column and compare it to the number of unique values
+
+```{r}
+ traffic.data %>%  rapply(function(x) length(unique(x)))
+ traffic.data %>%  rapply(function(x) length(which(is.na(x))))
+```
+
+It is clear that the columns "rd/rp/rpImg" and "rd/rp/img" are not relevant to our data due to the extremly high number of NAs that are found and the low number of unique value , also an img would be irrelevant to our study so they are removed 
+
+```{r}
+ col <- c("rd/rp/rpImg","rd/rp/img")
+ traffic.data <- traffic.data %>% select(- one_of(col)) %>% subset
+```
+
+Looking at the remaining columns and exploring random rows some of the variables are clear what they represent
+
+*  __crawl_date__ is the time the data was crawled 
+*  __rd/name__ is the name of the road sometimes contains the name of start and destination aswell
+*  __rd/hr And rd/mn__  since this is a time associated with the road it is probably the time this road was last updated
+*  __rd/new__ is a boolean indicating whether the road is new or not 
+*  __rd/rp/nm And rd/rp/fullnm__ is the name of the person reporting
+*  __rp/rp/hr And rd/rp/mn__ since this is a time associated with the person it is probably the time of report or the time passed since this person reported not sure yet
+*  __rd/rp/cm__ is the comment of the person it is either a written comment or one of the categories built in the app 
+*  __rd/rp/cmid__ is probably the id of the comment
+
+The columns __rd/streq__ , __rd/cmrq__ , __rd/ri__ , __rd/stid__ and __rd/rp/stid__ are still not clear and need further investigations
+
+It is not that easy to remove the duplicates in the entries as similar reports of the same person would have different attributes such as crawl_date or  the times.
+
+If __rd/rp/cmid_ is really the comment id of the person then this should be unique and can be used to remove duplicate rows  so we check this by sorting based on the cmid 
+
+```{r}
+traffic.data %>% arrange(`rd/rp/cmid`) %>% head
+```
+
+Noticing the entries having the same cmid represents the same comment the differences are in the crawl_date as the data is crawled every 30 minutes , rd/mn  rd/hr  which represents the last time road was updated , and rd/rp/hr rd/rp/mn which increases by 30 minutes aswell thus confirming that this time represents the time passed since this person made the report 
+Now it is safe to remove duplicate rows based on rd/rp/cmid values
+
+```{r}
+traffic.data <- traffic.data %>% subset(!duplicated(`rd/rp/cmid`))
+```
+ 
+ 
+Since the time that has passed since the report was made is really a useless information in its current state it should be  changed to reflect the actual time the report was made . So the crawl_date column values are changed to Date-time format 
+
+```{r}
+ traffic.data$crawl_date <- strptime(traffic.data$crawl_date,  "%a %b %d %H:%M:%S",tz = "UTC")
+```
+Now a new column is introduced containing the actual time of the report  which is done by subtracting the report time from the crawl_date
+
+```{r}
+traffic.data$`rd/rp/hr` <- as.numeric(traffic.data$`rd/rp/hr`)
+traffic.data$`rd/rp/mn` <- as.numeric(traffic.data$`rd/rp/mn`) 
+traffic.data$Report_Time <- (traffic.data$crawl_date - (traffic.data$`rd/rp/hr` * 3600 + traffic.data$`rd/rp/mn` * 60))
+```
+
+Now the previous report times are meaningless and are droppped 
+
+```{r}
+traffic.data$`rd/rp/hr` <- NULL
+traffic.data$`rd/rp/mn` <- NULL
+```
+
+Now trying to understand the rest of the columns we check the number of unique values again in each column and there exist 301 rd/nm which is the road names and 303 rd/ri so this is probably an ID given to the road but if thats the case then there exist a road with 2 ids so we check this 
+We group the data by road names and then summarize the values by number of distinct values in ids then check the roads which has more than 1 unique id.
+
+```{r}
+ temp <- traffic.data[2:15] %>% group_by(`rd/nm`) %>% summarize(distinct = (n_distinct(`rd/ri`)))
+ temp <-  temp %>% subset(tr$distinct != 1)
+```
+
+So there exist roads having 2 ids one is "Other Roads " and the other is "Sa7rawy;Cairo To Alex"  and looking to a sample of each 
+```{r}
+ temp <- traffic.data %>% subset(`rd/nm` == "Sa7rawy;Cairo To Alex" )
+ temp <- temp[!duplicated(temp$`rd/ri`),]
+ 
+  temp <- traffic.data %>% subset(`rd/nm` == "Other Roads" )
+ temp <- temp[!duplicated(temp$`rd/ri`),]
+```
+
+we find that road it of sa7rawy can take either "307" or "523" and Other roads can take "21" or "99" and this confirms that rd/ri corresponds to road ID 
+
+
