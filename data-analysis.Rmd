@@ -230,4 +230,14 @@ nrow(traffic.data %>% subset(`rd/cmrq` == "0"))
 
 So out of the 148367 rows there is 141433 with rd/strq = 1 and 138290 with rd/cmrq = 0 so probably this information is not meaningfull or even if it is it will not contribute much to the analysis of the data .
 
+Changing the column names of the data 
+```{r}
+ colnames(traffic.data)[which(colnames(traffic.data) == 'rd/rp/stid')] <- 'Report_Status'
+ colnames(traffic.data)[which(colnames(traffic.data) == 'rd/ri')] <- 'Road_ID'
+ colnames(traffic.data)[which(colnames(traffic.data) == 'rd/new')] <- 'Road_IsNew'
+ colnames(traffic.data)[which(colnames(traffic.data) == 'rd/rp/nm')] <- 'Reporter_Name'
+ colnames(traffic.data)[which(colnames(traffic.data) == 'rd/rp/fullnm')] <- 'Reporter_Full_Name'
+ colnames(traffic.data)[which(colnames(traffic.data) == 'rd/rp/cm')] <- 'Reporter_Comment'
+ colnames(traffic.data)[which(colnames(traffic.data) == 'rd/rp/cmid')] <- 'Reporter_Comment_ID'
+```
 
